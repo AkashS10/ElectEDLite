@@ -238,11 +238,11 @@ style.configure("Treeview.Heading", background="#565b5e", foreground="white", re
 style.map("Treeview.Heading", background=[('active', '#565b5e')])
 
 candidatesTV = Treeview(root, columns=("c1", "c2", "c3", "c4", "c5", "c6"), show="headings")
-candidatesTV.column("#1", anchor=CENTER, width=21)
+candidatesTV.column("#1", anchor=CENTER, width=30)
 candidatesTV.heading("#1", text="S.NO")
 candidatesTV.column("#2", anchor=CENTER, width=0, stretch=NO, minwidth=0)
 candidatesTV.heading("#2", text="ID")
-candidatesTV.column("#3", anchor=CENTER, width=300)
+candidatesTV.column("#3", anchor=CENTER, width=275)
 candidatesTV.heading("#3", text="Candidate Name")
 candidatesTV.column("#4", anchor=CENTER, width=150)
 candidatesTV.heading("#4", text="Party Name")
