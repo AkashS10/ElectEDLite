@@ -23,15 +23,22 @@ class CreateEditCandidate():
         self.ccCandNameEnt.place(relx=0.5, rely=0.225, relwidth=0.4, relheight=0.1)
 
         ccPartyNameLbl = CTkLabel(createCandidateFrame, text="Party Name: ", font=("Arial", 20), anchor="w")
-        ccPartyNameLbl.place(relx=0.1, rely=0.425, relwidth=0.4, relheight=0.1)
+        ccPartyNameLbl.place(relx=0.1, rely=0.375, relwidth=0.4, relheight=0.1)
         self.ccPartyNameEnt = CTkEntry(createCandidateFrame, placeholder_text="Party name...", font=("Arial", 20))
-        self.ccPartyNameEnt.place(relx=0.5, rely=0.425, relwidth=0.4, relheight=0.1)
+        self.ccPartyNameEnt.place(relx=0.5, rely=0.375, relwidth=0.4, relheight=0.1)
 
         ccPartyArtLbl = CTkLabel(createCandidateFrame, text="Party Art: ", font=("Arial", 20), anchor="w")
-        ccPartyArtLbl.place(relx=0.1, rely=0.625, relwidth=0.4, relheight=0.1)
+        ccPartyArtLbl.place(relx=0.1, rely=0.525, relwidth=0.4, relheight=0.1)
         self.ccPartyArtEnt = CTkEntry(createCandidateFrame, placeholder_text="Party Art...", font=("Arial", 20))
         self.ccPartyArtEnt.bind("<FocusIn>", self.ccPartyArtBind)
-        self.ccPartyArtEnt.place(relx=0.5, rely=0.625, relwidth=0.4, relheight=0.1)
+        self.ccPartyArtEnt.place(relx=0.5, rely=0.525, relwidth=0.4, relheight=0.1)
+
+        ccNumVotesLbl = CTkLabel(createCandidateFrame, text="Number of votes: ", font=("Arial", 20), anchor="w")
+        ccNumVotesLbl.place(relx=0.1, rely=0.675, relwidth=0.4, relheight=0.1)
+        self.ccNumVotesEnt = CTkEntry(createCandidateFrame, placeholder_text="0", font=("Arial", 20))
+        self.ccNumVotesEnt.configure(state="disabled")
+        self.ccNumVotesEnt.insert(END, 0)
+        self.ccNumVotesEnt.place(relx=0.5, rely=0.675, relwidth=0.4, relheight=0.1)
 
         cancelButton = CTkButton(createCandidateFrame, text="Cancel", font=("Arial", 20), command=self.bgFrame.place_forget)
         cancelButton.place(relx=0.1, rely=0.825, relwidth=0.375, relheight=0.1)
@@ -43,6 +50,9 @@ class CreateEditCandidate():
             self.ccCandNameEnt.insert(END, editData[1])
             self.ccPartyNameEnt.insert(END, editData[2])
             self.ccPartyArtEnt.insert(END, editData[3])
+            self.ccNumVotesEnt.configure(state="normal", placeholder_text="Number of votes...")
+            self.ccNumVotesEnt.delete(0, END)
+            self.ccNumVotesEnt.insert(END, editData[4])
 
     def createFunc(self):
         candName = self.ccCandNameEnt.get()
@@ -70,7 +80,11 @@ class CreateEditCandidate():
             database.commit()
             messagebox.showinfo("ElectED Lite - Configurator", "Candidate created successfully")
         else:
-            db.execute(f"UPDATE Candidates SET CandidateName=\"{candName}\", PartyName=\"{partyName}\", PartyArt=\"{partyArt}\" WHERE CandidateID={self.editData[0]}")
+            numVotes = self.ccNumVotesEnt.get()
+            if numVotes.isspace() or numVotes == "":
+                messagebox.showinfo("ElectED Lite - Configurator", "Please enter number of votes")
+                return
+            db.execute(f"UPDATE Candidates SET CandidateName=\"{candName}\", PartyName=\"{partyName}\", PartyArt=\"{partyArt}\", NumVotes={numVotes} WHERE CandidateID={self.editData[0]}")
             database.commit()
             messagebox.showinfo("ElectED Lite - Configurator", "Candidate edited successfully")
 
@@ -144,6 +158,32 @@ def deleteCandidate():
         updateTV()
         messagebox.showinfo("ElectED Lite - Configurator", "Candidate deleted successfully")
 
+def generateResults():
+    db.execute("SELECT CandidateName, PartyName, NumVotes FROM Candidates")
+    data = db.fetchall()
+    highestVoted = ""
+    highestVote = 0
+    for i in data:
+        if i[-1] > highestVote:
+            highestVote = i[-1]
+            highestVoted = i[0]
+    data += (("", "", ""),
+             ("", "", ""),
+             ("Winner", highestVoted, highestVote))
+    df = pd.DataFrame(data, columns=["Candidate Name", "Party Name", "Number of votes"])
+    df.to_csv(f"{categoryName}.csv", index=False)
+    messagebox.showinfo("ElectED Lite - Configurator", f"Results has been saved to {categoryName}.csv")
+
+def editCategory():
+    global categoryName
+    categoryName = simpledialog.askstring("ElectED Lite - Configurator", "Enter new category name:", initialvalue=categoryName)
+    if categoryName == None:
+        return
+    f = open("categoryName", "w+")
+    f.write(categoryName)
+    f.close()
+    titleLbl.configure(text=f"\tConfigure category {categoryName}")
+
 def updateTV():
     items = getAllChildren(candidatesTV)
     for item in items:
@@ -184,8 +224,11 @@ else:
     f.write(categoryName)
     f.close()
 
-titleLbl = CTkLabel(root, text=f"Configure category {categoryName}", font=("Arial", 24, "bold"))
-titleLbl.place(relx=0, rely=0, relwidth=1, relheight=0.15)
+titleLbl = CTkLabel(root, text=f"\tConfigure category {categoryName}", font=("Arial", 24, "bold"))
+titleLbl.place(relx=0, rely=0, relwidth=0.9, relheight=0.15)
+
+editCategoryBtn = CTkButton(root, text="✎", font=("Arial", 26), command=editCategory)
+editCategoryBtn.place(relx=0.9, rely=0.04, relwidth=0.05, relheight=0.067)
 
 style = Style()
 style.theme_use("default")
@@ -194,7 +237,7 @@ style.map('Treeview', background=[('selected', '#22559b')])
 style.configure("Treeview.Heading", background="#565b5e", foreground="white", relief="flat", font=("Segoe UI", 14, 'bold'))
 style.map("Treeview.Heading", background=[('active', '#565b5e')])
 
-candidatesTV = Treeview(root, columns=("c1", "c2", "c3", "c4", "c5"), show="headings")
+candidatesTV = Treeview(root, columns=("c1", "c2", "c3", "c4", "c5", "c6"), show="headings")
 candidatesTV.column("#1", anchor=CENTER, width=21)
 candidatesTV.heading("#1", text="S.NO")
 candidatesTV.column("#2", anchor=CENTER, width=0, stretch=NO, minwidth=0)
@@ -205,6 +248,8 @@ candidatesTV.column("#4", anchor=CENTER, width=150)
 candidatesTV.heading("#4", text="Party Name")
 candidatesTV.column("#5", anchor=CENTER, width=150)
 candidatesTV.heading("#5", text="Party Art")
+candidatesTV.column("#6", anchor=CENTER, width=150)
+candidatesTV.heading("#6", text="Number of votes")
 candidatesTVScrollbar = CTkScrollbar(root, command=candidatesTV.yview)
 candidatesTVScrollbar.place(relx=0.93, rely=0.15, relwidth=0.02, relheight=0.7)
 candidatesTV.place(relx=0.05, rely=0.15, relwidth=0.88, relheight=0.7)
@@ -218,7 +263,7 @@ editCandidateBtn.place(relx=0.2775, rely=0.875, relwidth=0.215, relheight=0.1)
 deleteCandidateBtn = CTkButton(root, text="Delete Candidate", font=("Segoe UI", 18), command=deleteCandidate)
 deleteCandidateBtn.place(relx=0.505, rely=0.875, relwidth=0.215, relheight=0.1)
 
-generateResultsBtn = CTkButton(root, text="Generate results", font=("Segoe UI", 18))
+generateResultsBtn = CTkButton(root, text="Generate results", font=("Segoe UI", 18), command=generateResults)
 generateResultsBtn.place(relx=0.7325, rely=0.875, relwidth=0.215, relheight=0.1)
 
 updateTV()
